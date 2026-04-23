@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koleksi Gambar Publik</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; background-color: #000; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        .main-container { width: 100%; max-width: 400px; background: #111; border: 1px solid #333; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #scrollBox { height: 500px; overflow-y: auto; padding: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; }
+        .img-item { width: calc(50% - 5px); background: #222; border-radius: 6px; overflow: hidden; border: 1px solid #444; position: relative; -webkit-touch-callout: none; }
+        .img-item img { width: 100%; height: auto; display: block; pointer-events: none; }
+        .delete-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(230, 0, 0, 0.85); display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 11px; text-align: center; z-index: 5; }
+        .controls { padding: 15px; background: #1a1a1a; border-bottom: 1px solid #333; text-align: center; }
+        .button-group { display: flex; gap: 2px; }
+        .btn { flex: 1; padding: 18px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; color: white; }
+        .btn-down { background: #e60000; }
+        .btn-reset { background: #444; }
+        #loading { display: none; color: #00ff00; font-size: 12px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="controls">
+            <input type="file" id="fileInput" accept="image/*" multiple>
+            <div id="loading">Sedang mengunggah ke server...</div>
+        </div>
+
+        <div id="scrollBox"></div>
+
+        <div class="button-group">
+            <button class="btn btn-down" id="btnSlide">SLIDE DOWN ↓</button>
+            <button class="btn btn-reset" onclick="resetSemua()">RESET 🗑️</button>
+        </div>
+    </div>
+
+    <script>
+        // Masukkan API Key dari screenshot kamu
+        const IMGBB_API_KEY = '748e24c1f46f75e9a55c687ba16e3437';
+        const scrollBox = document.getElementById('scrollBox');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+
+        // Load gambar yang tersimpan saat halaman dibuka
+        window.onload = () => {
+            const history = JSON.parse(localStorage.getItem('web_post_history') || '[]');
+            history.forEach(url => tambahGambarKeLayar(url));
+        };
+
+        fileInput.addEventListener('change', async function() {
+            loading.style.display = 'block';
+            for (const file of this.files) {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                try {
+                    // Kirim gambar ke API ImgBB
+                    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const resData = await res.json();
+                    const imageUrl = resData.data.url;
+
+                    tambahGambarKeLayar(imageUrl);
+                    updateHistory(imageUrl);
+                } catch (e) {
+                    alert('Gagal upload gambar');
+                }
+            }
+            loading.style.display = 'none';
+        });
+
+        function tambahGambarKeLayar(src) {
+            const div = document.createElement('div');
+            div.className = 'img-item';
+            div.innerHTML = `<img src="${src}"><div class="delete-overlay">TAP UNTUK HAPUS</div>`;
+            
+            let timer;
+            div.oncontextmenu = (e) => e.preventDefault();
+            div.addEventListener('touchstart', () => {
+                timer = setTimeout(() => { div.querySelector('.delete-overlay').style.display = 'flex'; }, 600);
+            });
+            div.addEventListener('touchend', () => clearTimeout(timer));
+            div.addEventListener('click', () => {
+                if (div.querySelector('.delete-overlay').style.display === 'flex') {
+                    div.remove();
+                    hapusDariHistory(src);
+                }
+            });
+            scrollBox.appendChild(div);
+        }
+
+        function updateHistory(url) {
+            let history = JSON.parse(localStorage.getItem('web_post_history') || '[]');
+            history.push(url);
+            localStorage.setItem('web_post_history', JSON.stringify(history));
+        }
+
+        function hapusDariHistory(url) {
+            let history = JSON.parse(localStorage.getItem('web_post_history') || '[]');
+            history = history.filter(item => item !== url);
+            localStorage.setItem('web_post_history', JSON.stringify(history));
+        }
+
+        document.getElementById('btnSlide').onclick = function() {
+            const target = scrollBox.scrollHeight;
+            function slide() {
+                if (scrollBox.scrollTop < (target - scrollBox.clientHeight)) {
+                    scrollBox.scrollTop += 2;
+                    requestAnimationFrame(slide);
+                }
+            }
+            requestAnimationFrame(slide);
+        };
+
+        function resetSemua() {
+            if (confirm("Hapus semua post?")) {
+                scrollBox.innerHTML = '';
+                localStorage.removeItem('web_post_history');
+            }
+        }
+    </script>
+</body>
+</html>
