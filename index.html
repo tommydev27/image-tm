@@ -13,37 +13,34 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: 3vw;
             margin: 0;
         }
 
         .main-container {
             width: 100%;
-            max-width: 400px;
             background: #111;
-            border: 1px solid #333;
-            border-radius: 12px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
         #scrollBox {
-            height: 500px;
+            height: 100vh;
             overflow-y: auto;
-            padding: 10px;
+            padding: 3vw;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 1.5vw;
             align-content: flex-start;
         }
 
         .img-item {
-            width: calc(50% - 5px);
-            background: #fff;
-            border-radius: 6px;
+            width: calc(33.33% - 1vw);
+            background: #222;
+            border-radius: 1vw;
             overflow: hidden;
-            border: 1px solid #444;
+            border: 0.5vw solid #444;
             position: relative;
             -webkit-touch-callout: none; 
             user-select: none;
@@ -56,49 +53,48 @@
             pointer-events: none;
         }
 
-/* Container hitam transparan yang menutupi gambar */
-.delete-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.85); /* Hitam transparan */
-    display: none; /* Sembunyi secara default */
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    z-index: 10;
-}
+        .delete-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(230, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 11px;
+            text-align: center;
+            padding: 5px;
+            z-index: 5;
+        }
 
-/* Gaya umum untuk tombol di dalam overlay */
-.btn-overlay {
-    width: 80%;
-    padding: 8px;
-    border: none;
-    border-radius: 4px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-/* Warna spesifik tombol Hapus */
-.btn-del-confirm { 
-    background: #ff4444; 
-    color: white; 
-}
-
-/* Warna spesifik tombol Batal */
-.btn-cancel { 
-    background: #444; 
-    color: white; 
-}
         .controls {
-            padding: 15px;
+            padding: 8px;
             background: #1a1a1a;
             border-bottom: 1px solid #333;
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Tombol Galeri Custom */
+        .btn-galeri {
+            background: #444;
+            color: #00baeb;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        #fileInput {
+            display: none; /* Sembunyikan input asli */
         }
 
         .button-group {
@@ -108,27 +104,31 @@
 
         .btn {
             flex: 1;
-            padding: 18px;
+            padding: 1vw;
             border: none;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 3vw;
             text-transform: uppercase;
-            color: white;
+            color: #00baeb;
         }
 
-        .btn-down { background: #e60000; }
-        .btn-reset { background: #444; }
+        .btn-down { background: #333; }
+        .btn-reset { background: #333; }
+        .btn-fs { background: #007bff; } 
 
-        #scrollBox::-webkit-scrollbar { width: 6px; }
-        #scrollBox::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
+        #scrollBox::-webkit-scrollbar { width: 4px; }
+        #scrollBox::-webkit-scrollbar-thumb { background: #555; }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
+    <div class="main-container" id="app">
         <div class="controls">
+            <label for="fileInput" class="btn-galeri">GALERI</label>
             <input type="file" id="fileInput" accept="image/*" multiple>
+            
+            <button class="btn-fs" onclick="toggleFullScreen()" style="padding: 4px 8px; border-radius: 1vw; border:none; color:white;">⛶</button>
         </div>
 
         <div id="scrollBox"></div>
@@ -142,6 +142,17 @@
     <script>
         const fileInput = document.getElementById('fileInput');
         const scrollBox = document.getElementById('scrollBox');
+        const app = document.getElementById('app');
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                app.requestFullscreen().catch(err => {
+                    alert(`Gagal Fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
 
         window.onload = () => {
             const savedData = localStorage.getItem('my_gallery');
@@ -154,9 +165,7 @@
         fileInput.addEventListener('change', function() {
             for (const file of this.files) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    tambahGambar(e.target.result, true);
-                };
+                reader.onload = (e) => tambahGambar(e.target.result, true);
                 reader.readAsDataURL(file);
             }
         });
@@ -166,58 +175,44 @@
             div.className = 'img-item';
             div.innerHTML = `
                 <img src="${src}">
-                <div class="delete-overlay">
-                    <button class="btn-overlay btn-del-confirm">HAPUS</button>
-                    <button class="btn-overlay btn-cancel">BATAL</button>
-                </div>
+                <div class="delete-overlay">TAP UNTUK HAPUS</div>
             `;
 
-            let clickCount = 0;
-            let clickTimer;
+            let timer;
+            div.oncontextmenu = (e) => e.preventDefault();
 
-            // Logika Ketuk 3 Kali
-            div.addEventListener('click', (e) => {
-                // Jangan hitung jika yang diklik tombol di dalam overlay
-                if (e.target.classList.contains('btn-overlay')) return;
-
-                clickCount++;
-                if (clickCount === 1) {
-                    clickTimer = setTimeout(() => {
-                        clickCount = 0;
-                    }, 500); // Waktu toleransi 0.5 detik
-                } else if (clickCount === 3) {
-                    clearTimeout(clickTimer);
-                    clickCount = 0;
+            const startAction = () => {
+                timer = setTimeout(() => {
                     div.querySelector('.delete-overlay').style.display = 'flex';
+                }, 800);
+            };
+
+            const endAction = () => clearTimeout(timer);
+
+            div.addEventListener('touchstart', startAction);
+            div.addEventListener('touchend', endAction);
+            div.addEventListener('mousedown', startAction);
+            div.addEventListener('mouseup', endAction);
+
+            div.addEventListener('click', () => {
+                if (div.querySelector('.delete-overlay').style.display === 'flex') {
+                    div.remove();
+                    updateStorage();
                 }
             });
-
-            // Aksi Tombol Hapus
-            div.querySelector('.btn-del-confirm').onclick = () => {
-                div.remove();
-                updateStorage();
-            };
-
-            // Aksi Tombol Batal
-            div.querySelector('.btn-cancel').onclick = () => {
-                div.querySelector('.delete-overlay').style.display = 'none';
-            };
 
             scrollBox.appendChild(div);
             if (isNew) updateStorage();
         }
 
         function updateStorage() {
-            const allImages = [];
-            document.querySelectorAll('.img-item img').forEach(img => {
-                allImages.push(img.src);
-            });
+            const allImages = Array.from(document.querySelectorAll('.img-item img')).map(img => img.src);
             localStorage.setItem('my_gallery', JSON.stringify(allImages));
         }
 
         function mulaiSlidePelan() {
             const targetBawah = scrollBox.scrollHeight;
-            const kecepatan = 2; 
+            const kecepatan = 1.5; 
             function animasi() {
                 if (scrollBox.scrollTop < (targetBawah - scrollBox.clientHeight)) {
                     scrollBox.scrollTop += kecepatan;
