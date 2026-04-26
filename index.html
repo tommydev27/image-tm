@@ -59,15 +59,37 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(230, 0, 0, 0.85);
+            background: rgba(230, 0, 0, 0.9);
             display: none;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 10px;
             text-align: center;
             padding: 5px;
             z-index: 5;
+            gap: 8px;
+        }
+
+        .btn-confirm {
+            background: white;
+            color: red;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
         }
 
         .controls {
@@ -80,7 +102,6 @@
             gap: 10px;
         }
 
-        /* Tombol Galeri Custom */
         .btn-galeri {
             background: #444;
             color: #00baeb;
@@ -94,7 +115,7 @@
         }
 
         #fileInput {
-            display: none; /* Sembunyikan input asli */
+            display: none;
         }
 
         .button-group {
@@ -127,7 +148,6 @@
         <div class="controls">
             <label for="fileInput" class="btn-galeri">GALERI</label>
             <input type="file" id="fileInput" accept="image/*" multiple>
-            
             <button class="btn-fs" onclick="toggleFullScreen()" style="padding: 4px 8px; border-radius: 1vw; border:none; color:white;">⛶</button>
         </div>
 
@@ -175,31 +195,38 @@
             div.className = 'img-item';
             div.innerHTML = `
                 <img src="${src}">
-                <div class="delete-overlay">TAP UNTUK HAPUS</div>
+                <div class="delete-overlay">
+                    <span>HAPUS?</span>
+                    <button class="btn-confirm">YA</button>
+                    <button class="btn-cancel">BATAL</button>
+                </div>
             `;
 
-            let timer;
-            div.oncontextmenu = (e) => e.preventDefault();
-
-            const startAction = () => {
-                timer = setTimeout(() => {
+            let lastTap = 0;
+            div.addEventListener('click', function(e) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                
+                // Deteksi Double Tap (interval < 300ms)
+                if (tapLength < 300 && tapLength > 0) {
                     div.querySelector('.delete-overlay').style.display = 'flex';
-                }, 800);
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            });
+
+            // Fungsi Tombol Ya
+            div.querySelector('.btn-confirm').onclick = (e) => {
+                e.stopPropagation();
+                div.remove();
+                updateStorage();
             };
 
-            const endAction = () => clearTimeout(timer);
-
-            div.addEventListener('touchstart', startAction);
-            div.addEventListener('touchend', endAction);
-            div.addEventListener('mousedown', startAction);
-            div.addEventListener('mouseup', endAction);
-
-            div.addEventListener('click', () => {
-                if (div.querySelector('.delete-overlay').style.display === 'flex') {
-                    div.remove();
-                    updateStorage();
-                }
-            });
+            // Fungsi Tombol Batal
+            div.querySelector('.btn-cancel').onclick = (e) => {
+                e.stopPropagation();
+                div.querySelector('.delete-overlay').style.display = 'none';
+            };
 
             scrollBox.appendChild(div);
             if (isNew) updateStorage();
